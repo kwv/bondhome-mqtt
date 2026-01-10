@@ -1,6 +1,8 @@
 # bondhome-mqtt
 MQTT bridge for BondHome API. See http://docs-local.appbond.com
 
+This is a modernized fork of the original `bondhome-mqtt` bridge, updated for Go 1.23 and aligned with standard CI/CD practices.
+
 ## Overview
 
 This program does two things:
@@ -9,32 +11,45 @@ This program does two things:
 
 ### Topics
 
-On startup, the `bondhome-mqtt` program gets a list of all devices connected
-to the Bond Home Bridge and sets up the following MQTT topics for each device:
+On startup, the `bondhome-mqtt` program gets a list of all devices connected to the Bond Home Bridge and sets up the following MQTT topics for each device:
 
-`bondhome/devices/<device id>/<action>` for triggering actions
-
-`bondhome/devices/<device id>/state` for publishing device state
+- `bondhome/devices/<device id>/<action>`: For triggering actions
+- `bondhome/devices/<device id>/state`: For publishing device state
 
 ## Usage
+
+For detailed information on building, testing, and contributing to this project, please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Command line
 
 ```bash
-go run main.go -broker tcp://<host>:<port> -bridge <ip> -token <token>
+./bondhome-mqtt -broker tcp://<host>:<port> -bridge <ip> -token <token> [options]
 ```
 
 #### Options
 
-*  `-broker` the address of the MQTT broker, in the form `tcp://<host>:<port>`
-*  `-bridge` the IP address of the Bond bridge
-*  `-token` the Bond API token, see [2] for instructions on getting the correct value
-*  `-logtostderr` enables additional logging output (by default, only warnings and errors will be logged)
-*  `-v=N` enables verbose logging at level `N`
+*   `-broker`: The address of the MQTT broker (e.g., `tcp://localhost:1883`)
+*   `-bridge`: The IP address of the Bond Home bridge
+*   `-token`: The Bond API token
+*   `-mqtt-user`: (Optional) Username for MQTT broker
+*   `-mqtt-pass`: (Optional) Password for MQTT broker
+*   `-mqtt-id`: (Optional) Custom Client ID for MQTT connection
+*   `-v`: Enable verbose (debug) logging
 
 ### Docker
 
-A pre-built Docker image is available: `docker pull docker pull ghcr.io/ssmall/bondhome-mqtt:v1.0.0`
+A pre-built image is available on Docker Hub:
+```bash
+docker pull kwv4/bondhome-mqtt:latest
+```
+
+To run:
+```bash
+docker run kwv4/bondhome-mqtt \
+  -broker tcp://<host>:<port> \
+  -bridge <ip> \
+  -token <token>
+```
 
 [1]: http://docs-local.appbond.com/#section/Bond-Push-UDP-Protocol-(BPUP)
 [2]: http://docs-local.appbond.com/#section/Getting-Started/Getting-the-Bond-Token

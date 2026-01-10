@@ -1,0 +1,55 @@
+# .goreleaser.yml for bondhome-mqtt
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: bondhome-mqtt
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.Version={{.Version}}
+    binary: bondhome-mqtt
+
+dockers_v2:
+  - id: bondhome-mqtt
+    images:
+      - "kwv4/bondhome-mqtt"
+    tags:
+      - "{{ .Version }}"
+      - "latest"
+    dockerfile: Dockerfile
+    labels:
+      org.opencontainers.image.version: "{{ .Version }}"
+    # Platforms to build for
+    platforms:
+      - linux/amd64
+      - linux/arm64
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
