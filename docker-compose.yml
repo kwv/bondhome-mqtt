@@ -1,0 +1,13 @@
+services:
+  bondhome-mqtt:
+    image: kwv4/bondhome-mqtt:latest
+    container_name: bondhome-mqtt
+    restart: unless-stopped
+    environment:
+      - BOND_BROKER=${BOND_BROKER:-tcp://mqtt.home:1883}
+      - BOND_BRIDGE=${BOND_BRIDGE}
+      - BOND_TOKEN=${BOND_TOKEN}
+      - BOND_MQTT_USER=${BOND_MQTT_USER}
+      - BOND_MQTT_PASS=${BOND_MQTT_PASS}
+      - BOND_MQTT_ID=${BOND_MQTT_ID:-bondhome-mqtt}
+      - BOND_VERBOSE=${BOND_VERBOSE:-false}

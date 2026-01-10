@@ -36,19 +36,26 @@ For detailed information on building, testing, and contributing to this project,
 *   `-mqtt-id`: (Optional) Custom Client ID for MQTT connection
 *   `-v`: Enable verbose (debug) logging
 
-### Docker
+### Docker Compose
 
-A pre-built image is available on Docker Hub:
+You can also use Docker Compose for easy deployment:
+
+1. Copy `.env.example` to `.env` and fill in your details.
+2. Run the bridge:
 ```bash
-docker pull kwv4/bondhome-mqtt:latest
+docker-compose up -d
 ```
 
-To run:
-```bash
-docker run kwv4/bondhome-mqtt \
-  -broker tcp://<host>:<port> \
-  -bridge <ip> \
-  -token <token>
+Example `docker-compose.yml`:
+```yaml
+services:
+  bondhome-mqtt:
+    image: kwv4/bondhome-mqtt:latest
+    restart: unless-stopped
+    environment:
+      - BOND_BROKER=tcp://mqtt.home:1883
+      - BOND_BRIDGE=<bridge-ip>
+      - BOND_TOKEN=<token>
 ```
 
 [1]: http://docs-local.appbond.com/#section/Bond-Push-UDP-Protocol-(BPUP)

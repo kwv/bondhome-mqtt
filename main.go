@@ -21,30 +21,46 @@ import (
 var Version = "dev"
 
 func main() {
-	brokerAddress := flag.String("broker", "", "The broker to connect to; see https://godoc.org/github.com/eclipse/paho.mqtt.golang#ClientOptions.AddBroker")
-	mqttUser := flag.String("mqtt-user", "", "The username for the MQTT broker")
-	mqttPass := flag.String("mqtt-pass", "", "The password for the MQTT broker")
-	mqttID := flag.String("mqtt-id", "", "The client ID for the MQTT broker (defaults to hostname)")
-	bridgeAddress := flag.String("bridge", "", "The hostname or IP address of the Bond Home bridge")
-	bridgeToken := flag.String("token", "", "The Bond Home bridge API token. See http://docs-local.appbond.com/#section/Getting-Started/Getting-the-Bond-Token")
-	verbose := flag.Bool("v", false, "Enable verbose logging")
+	brokerAddress := flag.String("broker", os.Getenv("BOND_BROKER"), "The broker to connect to; see https://godoc.org/github.com/eclipse/paho.mqtt.golang#ClientOptions.AddBroker")
+	mqttUser := flag.String("mqtt-user", os.Getenv("BOND_MQTT_USER"), "The username for the MQTT broker")
+	mqttPass := flag.String("mqtt-pass", os.Getenv("BOND_MQTT_PASS"), "The password for the MQTT broker")
+	mqttID := flag.String("mqtt-id", os.Getenv("BOND_MQTT_ID"), "The client ID for the MQTT broker (defaults to hostname)")
+	bridgeAddress := flag.String("bridge", os.Getenv("BOND_BRIDGE"), "The hostname or IP address of the Bond Home bridge")
+	bridgeToken := flag.String("token", os.Getenv("BOND_TOKEN"), "The Bond Home bridge API token. See http://docs-local.appbond.com/#section/Getting-Started/Getting-the-Bond-Token")
+	verbose := flag.Bool("v", os.Getenv("BOND_VERBOSE") == "true", "Enable verbose logging")
 	flag.Parse()
 
-	if *brokerAddress == "" {
-		fmt.Fprintln(os.Stderr, "Must specify broker!")
+	// Helper to get flag or env var
+	getVal := func(f *string, env string) string {
+		if *f != "" {
+			return *f
+		}
+		return os.Getenv(env)
+	}
+
+	broker := getVal(brokerAddress, "BOND_BROKER")
+	user := getVal(mqttUser, "BOND_MQTT_USER")
+	pass := getVal(mqttPass, "BOND_MQTT_PASS")
+	id := getVal(mqttID, "BOND_MQTT_ID")
+	bridgeAddr := getVal(bridgeAddress, "BOND_BRIDGE")
+	token := getVal(bridgeToken, "BOND_TOKEN")
+	isVerbose := *verbose || os.Getenv("BOND_VERBOSE") == "true"
+
+	if broker == "" {
+		slog.Error("Must specify broker (via -broker or BOND_BROKER)")
 		os.Exit(1)
 	}
-	if *bridgeAddress == "" {
-		fmt.Fprintln(os.Stderr, "Must specify bridge!")
+	if bridgeAddr == "" {
+		slog.Error("Must specify bridge (via -bridge or BOND_BRIDGE)")
 		os.Exit(1)
 	}
-	if *bridgeToken == "" {
-		fmt.Fprintln(os.Stderr, "Must specify token!")
+	if token == "" {
+		slog.Error("Must specify token (via -token or BOND_TOKEN)")
 		os.Exit(1)
 	}
 
 	opts := &slog.HandlerOptions{}
-	if *verbose {
+	if isVerbose {
 		opts.Level = slog.LevelDebug
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, opts))
@@ -53,15 +69,15 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mqttClient, err := mqtt.NewClient(*brokerAddress, *mqttUser, *mqttPass, *mqttID)
+	mqttClient, err := mqtt.NewClient(broker, user, pass, id)
 	if err != nil {
 		slog.Error("Unable to connect to MQTT broker", "error", err)
 		os.Exit(1)
 	}
 
-	slog.Info("Connected to broker", "address", *brokerAddress)
+	slog.Info("Connected to broker", "address", broker)
 
-	bridge := bondhome.NewBridge(*bridgeAddress, *bridgeToken)
+	bridge := bondhome.NewBridge(bridgeAddr, token)
 
 	err = setupDeviceActionHandlers(ctx, bridge, mqttClient)
 	if err != nil {
@@ -69,7 +85,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	pushClient, err := bondhome.NewClient(ctx, *bridgeAddress+":30007")
+	pushClient, err := bondhome.NewClient(ctx, bridgeAddr+":30007")
 	if err != nil {
 		slog.Error("Exiting due to error", "error", err)
 		os.Exit(1)
