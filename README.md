@@ -54,8 +54,8 @@ services:
     restart: unless-stopped
     environment:
       - BOND_BROKER=tcp://mqtt.home:1883
-      - BOND_BRIDGE=<bridge-ip>
-      - BOND_TOKEN=<token>
+      - BOND_BRIDGE=
+      - BOND_TOKEN=
 ```
 
 [1]: http://docs-local.appbond.com/#section/Bond-Push-UDP-Protocol-(BPUP)
