@@ -2,10 +2,9 @@ package mqtt
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
-
-	"github.com/golang/glog"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
 )
@@ -16,15 +15,28 @@ const (
 
 // NewClient creates a new MQTT client and tries to establish
 // a connection to the specified broker
-func NewClient(broker string) (paho.Client, error) {
-	clientID, err := os.Hostname()
-	if err != nil {
-		return nil, err
+func NewClient(broker, username, password, clientID string) (paho.Client, error) {
+	if clientID == "" {
+		var err error
+		clientID, err = os.Hostname()
+		if err != nil {
+			return nil, err
+		}
 	}
-	glog.Infof("Establishing connection to MQTT broker @ %s using client ID %q", broker, clientID)
+
+	slog.Info("Establishing connection to MQTT broker", "broker", broker, "client_id", clientID)
+
 	opts := paho.NewClientOptions()
 	opts.AddBroker(broker)
 	opts.SetClientID(clientID)
+
+	if username != "" {
+		opts.SetUsername(username)
+	}
+	if password != "" {
+		opts.SetPassword(password)
+	}
+
 	client := paho.NewClient(opts)
 	connectToken := client.Connect()
 	if !connectToken.WaitTimeout(connectTimeout) {
