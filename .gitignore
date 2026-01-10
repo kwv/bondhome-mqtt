@@ -15,5 +15,10 @@
 # vendor/
 
 .vscode/
-
+.env
+dist/
+bondhome-mqtt
+linux/
+bondhome-mqtt-check
+bondhome-mqtt-test
 .devcontainer
