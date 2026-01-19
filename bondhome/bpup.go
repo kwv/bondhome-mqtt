@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"os"
 	"strings"
 	"time"
 )
@@ -25,6 +26,62 @@ type Update struct {
 
 // Timeout is returned when an operation times out
 type Timeout error
+
+// stripLocalHash removes the "__" (local hash) field from a JSON object recursively.
+// It keeps the "_" (subtree hash) field for change detection.
+// Returns the modified JSON or the original if stripping is disabled or fails.
+func stripLocalHash(data json.RawMessage) json.RawMessage {
+	// Check environment variable (default to true if not set or invalid)
+	stripEnabled := true
+	if envVal := os.Getenv("BOND_STRIP_LOCAL_HASH"); envVal != "" {
+		stripEnabled = envVal == "true" || envVal == "1"
+	}
+
+	if !stripEnabled {
+		return data
+	}
+
+	var obj interface{}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		// If unmarshaling fails, return original data
+		slog.Debug("Failed to unmarshal data for field stripping", "error", err)
+		return data
+	}
+
+	stripped := stripLocalHashRecursive(obj)
+	result, err := json.Marshal(stripped)
+	if err != nil {
+		// If marshaling fails, return original data
+		slog.Debug("Failed to marshal stripped data", "error", err)
+		return data
+	}
+
+	return json.RawMessage(result)
+}
+
+// stripLocalHashRecursive recursively removes "__" fields from maps and slices
+func stripLocalHashRecursive(obj interface{}) interface{} {
+	switch v := obj.(type) {
+	case map[string]interface{}:
+		result := make(map[string]interface{})
+		for key, value := range v {
+			// Strip only "__" (local hash), keep "_" (subtree hash)
+			if key == "__" {
+				continue
+			}
+			result[key] = stripLocalHashRecursive(value)
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, len(v))
+		for i, item := range v {
+			result[i] = stripLocalHashRecursive(item)
+		}
+		return result
+	default:
+		return v
+	}
+}
 
 // PushClient is an interface for receiving messages
 // pushed from a Bond Home bridge
@@ -128,6 +185,10 @@ func (c *bpupClient) Receive(timeout time.Duration) (*Update, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshaling %q: %w", trimmed, err)
 	}
+
+	// Strip the "__" (local hash) field from the body
+	update.Body = stripLocalHash(update.Body)
+
 	return update, nil
 }
 
